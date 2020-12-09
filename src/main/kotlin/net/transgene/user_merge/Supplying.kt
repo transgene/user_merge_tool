@@ -1,13 +1,13 @@
 package net.transgene.user_merge
 
-import java.util.function.Supplier
+interface UserSupplier {
+    fun getUserEntries(): List<UserEntry>
+}
 
-interface UserSupplier : Supplier<List<UserEntry>>
 
+internal const val FORMAT_MISMATCH_MESSAGE_TEMPLATE = "Error in line #%d: invalid format. Should be: username -> email[, email]. Please enter the entries again."
 
-internal const val FORMAT_MISMATCH_MESSAGE = "This input does not match the format: username -> email[, email]. Please try again."
-
-internal const val USER_ALREADY_IN_LIST_MESSAGE_TEMPLATE = "User with name '%s' is already in list. Please provide another name."
+internal const val USER_ALREADY_IN_LIST_MESSAGE_TEMPLATE = "Error in line #%d: user with name '%s' is already in list. Please enter the entries again."
 
 class ConsoleUserSupplier : UserSupplier {
 
@@ -15,40 +15,53 @@ class ConsoleUserSupplier : UserSupplier {
 
     private val emailDelimiterRegex = Regex(",\\s")
 
-    override fun get(): List<UserEntry> {
+    override fun getUserEntries(): List<UserEntry> {
+        println("Please provide a list of user entries in the following format: username -> email[, email], each entry on a separate line.")
+        println("Enter empty line to finish.")
+
+        var entries: List<UserEntry>? = null
+        while (entries == null) {
+            val rawEntries = getLinesFromConsole()
+            entries = extractEntries(rawEntries)
+        }
+        return entries
+    }
+
+    internal fun extractEntries(lines: List<String>): List<UserEntry>? {
         val entries = mutableListOf<UserEntry>()
         val users = mutableSetOf<String>()
 
-        println("Please provide a list of user entries, one by one. Enter empty line to finish.")
-        while (true) {
-            print("Entry: ")
-            val line = readLine()
-            if (line == null || line.isBlank()) {
-                return entries
+        lines.forEachIndexed { i, line ->
+            val matchResult = lineRegex.find(line)
+            if (matchResult == null) {
+                println(FORMAT_MISMATCH_MESSAGE_TEMPLATE.format(i + 1))
+                return null
             } else {
-                val entry = extractEntry(line, users)
-                if (entry != null) {
-                    entries.add(entry)
+                val username = matchResult.groupValues[1]
+                if (users.contains(username)) {
+                    println(USER_ALREADY_IN_LIST_MESSAGE_TEMPLATE.format(i + 1, username))
+                    return null
+                } else {
+                    users.add(username)
+                    val emails = matchResult.groupValues[2].split(emailDelimiterRegex)
+                    entries.add(UserEntry(username, emails.toSet()))
                 }
             }
         }
+        return entries
     }
 
-    internal fun extractEntry(line: String, enteredUsers: MutableSet<String>): UserEntry? {
-        var entry: UserEntry? = null
-        val matchResult = lineRegex.find(line)
-        if (matchResult == null) {
-            println(FORMAT_MISMATCH_MESSAGE)
-        } else {
-            val username = matchResult.groupValues[1]
-            if (enteredUsers.contains(username)) {
-                println(USER_ALREADY_IN_LIST_MESSAGE_TEMPLATE.format(username))
+    private fun getLinesFromConsole(): List<String> {
+        val lines = mutableListOf<String>()
+
+        println("Entries:")
+        while (true) {
+            val line = readLine()
+            if (line == null || line.isBlank()) {
+                return lines
             } else {
-                enteredUsers.add(username)
-                val emails = matchResult.groupValues[2].split(emailDelimiterRegex)
-                entry = UserEntry(username, emails.toSet())
+                lines.add(line.trim())
             }
         }
-        return entry
     }
 }

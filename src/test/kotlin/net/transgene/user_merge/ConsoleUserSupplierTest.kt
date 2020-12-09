@@ -25,48 +25,7 @@ class ConsoleUserSupplierTest {
     private val underTest = ConsoleUserSupplier()
 
     @Test
-    fun extractEntry_whenFormatIsInvalid_thenPrintFormatMismatchError() {
-        val line = "invalid"
-
-        val actual = underTest.extractEntry(line, mutableSetOf())
-
-        assertThat(actual).isNull()
-        assertThat(testOut.toString().trim()).isEqualTo(FORMAT_MISMATCH_MESSAGE)
-    }
-
-    @Test
-    fun extractEntry_whenEnteredDuplicateUser_thenPrintUserAlreadyInListError() {
-        val users = mutableSetOf(USER_1)
-        val line = "$USER_1 -> $EMAIL_1"
-
-        val actual = underTest.extractEntry(line, users)
-
-        assertThat(actual).isNull()
-        assertThat(testOut.toString().trim()).isEqualTo(USER_ALREADY_IN_LIST_MESSAGE_TEMPLATE, USER_1)
-    }
-
-    @Test
-    fun extractEntry_whenUserHasOneEmail_thenCorrectlyExtractIt() {
-        val line = "$USER_1 -> $EMAIL_1"
-
-        val actual = underTest.extractEntry(line, mutableSetOf())
-
-        assertThat(actual!!.name).isEqualTo(USER_1)
-        assertThat(actual.emails).containsExactly(EMAIL_1)
-    }
-
-    @Test
-    fun extractEntry_whenUserHasSeveralEmails_thenCorrectlyExtractThemAll() {
-        val line = "$USER_1 -> $EMAIL_1, $EMAIL_2, $EMAIL_3"
-
-        val actual = underTest.extractEntry(line, mutableSetOf())
-
-        assertThat(actual!!.name).isEqualTo(USER_1)
-        assertThat(actual.emails).containsExactlyInAnyOrder(EMAIL_1, EMAIL_2, EMAIL_3)
-    }
-
-    @Test
-    fun get_whenEnteredBlankLine_thenStopRetrievingEntries() {
+    fun getUserEntries_whenEnteredBlankLine_thenStopRetrievingEntries() {
         val testIn = ByteArrayInputStream((
                 "$USER_1 -> $EMAIL_1\n" +
                 "$USER_2 -> $EMAIL_2\n" +
@@ -74,9 +33,47 @@ class ConsoleUserSupplierTest {
         ).toByteArray())
         System.setIn(testIn)
 
-        val actual = underTest.get()
+        val actual = underTest.getUserEntries()
 
         assertThat(actual).containsExactlyInAnyOrder(getUserEntry(USER_1, EMAIL_1), getUserEntry(USER_2, EMAIL_2))
+    }
+
+    @Test
+    fun extractEntries_whenFormatIsInvalid_thenPrintFormatMismatchError() {
+        val lines = listOf("invalid")
+
+        val actual = underTest.extractEntries(lines)
+
+        assertThat(actual).isNull()
+        assertThat(testOut.toString().trim()).isEqualTo(FORMAT_MISMATCH_MESSAGE_TEMPLATE, 1)
+    }
+
+    @Test
+    fun extractEntries_whenEnteredDuplicateUser_thenPrintUserAlreadyInListError() {
+        val lines = listOf("$USER_1 -> $EMAIL_1", "$USER_1 -> $EMAIL_2")
+
+        val actual = underTest.extractEntries(lines)
+
+        assertThat(actual).isNull()
+        assertThat(testOut.toString().trim()).isEqualTo(USER_ALREADY_IN_LIST_MESSAGE_TEMPLATE, 2, USER_1)
+    }
+
+    @Test
+    fun extractEntries_whenAllLinesAreValid_thenReturnListOfEntries() {
+        val lines = listOf("$USER_1 -> $EMAIL_1", "$USER_2 -> $EMAIL_2")
+
+        val actual = underTest.extractEntries(lines)
+
+        assertThat(actual).containsExactlyInAnyOrder(getUserEntry(USER_1, EMAIL_1), getUserEntry(USER_2, EMAIL_2))
+    }
+
+    @Test
+    fun extractEntries_whenUserHasSeveralEmails_thenExtractThemAll() {
+        val lines = listOf("$USER_1 -> $EMAIL_1, $EMAIL_2, $EMAIL_3")
+
+        val actual = underTest.extractEntries(lines)
+
+        assertThat(actual).containsExactly(getUserEntry(USER_1, EMAIL_1, EMAIL_2, EMAIL_3))
     }
 
     @BeforeTest

@@ -3,7 +3,7 @@ package net.transgene.user_merge
 class Printer {
 
     fun printUsers(entries: List<UserEntry>): String {
-        return "[\n\t${entries.joinToString("\n\t") { printUser(it) }}\n]"
+        return entries.joinToString("\n") { printUser(it) }
     }
 
     fun printUser(entry: UserEntry): String {

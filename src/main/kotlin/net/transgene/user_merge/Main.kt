@@ -5,9 +5,8 @@ fun main() {
     val merger = Merger()
     val printer = Printer()
 
-    val entries = supplier.get()
-    
-    println("Merging the list of users: \n${printer.printUsers(entries)}\n")
+    val entries = supplier.getUserEntries()
+
     val result = merger.mergeUsers(entries)
-    println("Users merged: \n${printer.printUsers(result)}\n")
+    println("Users merged: \n\n${printer.printUsers(result)}\n")
 }
